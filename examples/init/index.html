@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Vue.js init example</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+      body{
+        text-align: center;
+      }
+    </style>
+    <!-- Delete ".min" for console warnings in development -->
+    <script src="../../dist/vue.js"></script>
+    </head>
+  <body>
+
+    <div id="app">
+      <h1>
+        {{getMsg}}
+      </h1>
+      <h2>
+        {{getMsg}}
+      </h2>
+      <h3>
+        {{getMsg}}
+      </h3>
+    </div>
+
+    <script>
+      // debugger;
+
+      new Vue({
+        el: '#app',
+        data: {
+          hello: 'hello world!!!'
+        },
+        computed:{
+          getMsg: function(){
+            console.log('111111');
+            return this.hello;
+          }
+        }
+      })
+    </script>
+
+  </body>
+</html>
