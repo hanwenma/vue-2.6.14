@@ -112,6 +112,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
     return
   }
   let ob: Observer | void
+  // value 已经通过 Observer 处理，直接返回上一次的 __ob__ 实例
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     ob = value.__ob__
   } else if (
@@ -121,6 +122,7 @@ export function observe (value: any, asRootData: ?boolean): Observer | void {
     Object.isExtensible(value) &&
     !value._isVue
   ) {
+    // 为 value 实例化一个 Observer 实例
     ob = new Observer(value)
   }
   if (asRootData && ob) {
@@ -208,7 +210,7 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   // 处理数组：Vue.set(arr, index, value)，实现响应式
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key)
-    // 本质上是通过重写后的 splice 方法进行实现的
+    // 本质上是通过重写后的 splice 方法进行实现元素替换
     target.splice(key, 1, val)
     return val
   }
@@ -260,6 +262,7 @@ export function del (target: Array<any> | Object, key: any) {
     return
   }
 
+  // 删除对象属性
   const ob = (target: any).__ob__
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(

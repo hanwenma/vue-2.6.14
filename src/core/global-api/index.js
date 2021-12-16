@@ -52,7 +52,7 @@ export function initGlobalAPI (Vue: GlobalAPI) {
 
   // 全局 set 方法，处理数组元素或对象属性的新增或修改
   Vue.set = set
-  // 全局 delete 方法，删除数组元素或对象属性
+  // 全局 delete 方法，删除数组元素或对象属性 
   Vue.delete = del
   // 全局 nextTick 方法，主要依赖于浏览的异步任务队列
   Vue.nextTick = nextTick
