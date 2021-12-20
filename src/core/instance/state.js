@@ -349,11 +349,19 @@ export function stateMixin (Vue: Class<Component>) {
   // flow somehow has problems with directly declared definition object
   // when using Object.defineProperty, so we have to procedurally build up
   // the object here.
+
+  // 处理 data 数据，定义 get 方法，访问 this._data
   const dataDef = {}
   dataDef.get = function () { return this._data }
+
+  // 处理 props 数据，定义 get 方法，访问 this._props
   const propsDef = {}
   propsDef.get = function () { return this._props }
+
+  // 不允许直接替换 data 和 props 属性
   if (process.env.NODE_ENV !== 'production') {
+    // 不可以通过 this.$data = newVal
+    // 只能通过 this.$data.key = newVal
     dataDef.set = function () {
       warn(
         'Avoid replacing instance root $data. ' +
@@ -361,16 +369,20 @@ export function stateMixin (Vue: Class<Component>) {
         this
       )
     }
+    // 直接提示 props 是只读的
     propsDef.set = function () {
       warn(`$props is readonly.`, this)
     }
   }
+  // 把 data 和 props 分别代理到 Vue.prototype 上的 $data 和 $props 上，支持通过 this.$data 和 this.$props 的形式直接访问
   Object.defineProperty(Vue.prototype, '$data', dataDef)
   Object.defineProperty(Vue.prototype, '$props', propsDef)
 
+  // 定义实例 this.$set 和 this.$delete 方法，它们是全局 Vue.set 和 Vue.delete 方法的别名
   Vue.prototype.$set = set
   Vue.prototype.$delete = del
 
+  // 定义实例 this.$watch 方法
   Vue.prototype.$watch = function (
     expOrFn: string | Function,
     cb: any,

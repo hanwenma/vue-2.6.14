@@ -17,8 +17,10 @@ function Vue (options) {
   this._init(options)
 }
 
+// 定义 this._init 初始化方法
 initMixin(Vue)
 
+// 定义 $data $props $et $dlete $watch 实例方法
 stateMixin(Vue)
 
 eventsMixin(Vue)
