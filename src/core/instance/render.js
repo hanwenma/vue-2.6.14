@@ -62,6 +62,7 @@ export function renderMixin (Vue: Class<Component>) {
   // install runtime convenience helpers
   installRenderHelpers(Vue.prototype)
 
+  // 这里就是 Vue.nextTick 的一个别名
   Vue.prototype.$nextTick = function (fn: Function) {
     return nextTick(fn, this)
   }

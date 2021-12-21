@@ -56,6 +56,7 @@ export function initLifecycle (vm: Component) {
 }
 
 export function lifecycleMixin (Vue: Class<Component>) {
+  // 组件初始化渲染和更新时的入口
   Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
     const vm: Component = this
     const prevEl = vm.$el
@@ -64,11 +65,13 @@ export function lifecycleMixin (Vue: Class<Component>) {
     vm._vnode = vnode
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
+
+    // prevVnode 不存在，代表是初始化渲染
     if (!prevVnode) {
-      // initial render
+      // patch 阶段：patch、diff 算法
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */)
     } else {
-      // updates
+       // prevVnode 存在，代表是后续更新阶段
       vm.$el = vm.__patch__(prevVnode, vnode)
     }
     restoreActiveInstance()
@@ -87,26 +90,43 @@ export function lifecycleMixin (Vue: Class<Component>) {
     // updated in a parent's updated hook.
   }
 
+  // 强制 Vue 实例重新渲染，注意它仅影响实例本身和插入插槽内容的子组件，而不是所有子组件
   Vue.prototype.$forceUpdate = function () {
     const vm: Component = this
     if (vm._watcher) {
+      // 核心就是执行组件实例上的 _watcher.update() 方法
       vm._watcher.update()
     }
   }
 
+  /*
+  完全销毁一个实例：
+    1. 清理它与其它实例的连接，解绑它的全部指令及事件监听器
+    2. 触发 beforeDestroy 和 destroyed 的钩子
+
+  一般不会手动调用这个函数，官方推荐使用 v-if 和 v-for 的方式控制子组件的生命周期
+  */ 
   Vue.prototype.$destroy = function () {
     const vm: Component = this
+    // 如果当前组件已经开始销毁，直接返回
     if (vm._isBeingDestroyed) {
       return
     }
+
+    // 调用 beforeDestroy 生命周期钩子
     callHook(vm, 'beforeDestroy')
+
+    // 标记当前组件开始进行销毁
     vm._isBeingDestroyed = true
     // remove self from parent
     const parent = vm.$parent
     if (parent && !parent._isBeingDestroyed && !vm.$options.abstract) {
+      // 将当前组件从父组件的 children 属性中移除掉
       remove(parent.$children, vm)
     }
+
     // teardown watchers
+    // 移除和当前组件相关的所有 watcher
     if (vm._watcher) {
       vm._watcher.teardown()
     }
@@ -114,24 +134,33 @@ export function lifecycleMixin (Vue: Class<Component>) {
     while (i--) {
       vm._watchers[i].teardown()
     }
+
     // remove reference from data ob
     // frozen object may not have observer.
+    // 删除当前组件上 _data.__ob__ 的引用数
     if (vm._data.__ob__) {
       vm._data.__ob__.vmCount--
     }
-    // call the last hook...
+
+    // 标记当前组件已经销毁
     vm._isDestroyed = true
-    // invoke destroy hooks on current rendered tree
+    
+    // 在当前渲染树中调用 destroy 钩子
     vm.__patch__(vm._vnode, null)
-    // fire destroyed hook
+
+    // 调用 destroyed 声明周期函数钩子
     callHook(vm, 'destroyed')
-    // turn off all instance listeners.
+
+    // 移除当前组件的所有监听器
     vm.$off()
+
     // remove __vue__ reference
     if (vm.$el) {
       vm.$el.__vue__ = null
     }
+
     // release circular reference (#6759)
+    // 将当前组件的父组件设置为 null，断开和父组件中间的关系
     if (vm.$vnode) {
       vm.$vnode.parent = null
     }

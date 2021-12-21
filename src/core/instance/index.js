@@ -23,10 +23,13 @@ initMixin(Vue)
 // 定义 $data $props $et $dlete $watch 实例方法
 stateMixin(Vue)
 
+// 定义 $on $once $off $emit 实例方法
 eventsMixin(Vue)
 
+// 定义 _update $forceUpdate $destroy 实例方法
 lifecycleMixin(Vue)
 
+// 定义 $nextTick _render 实例方法
 renderMixin(Vue)
 
 export default Vue
