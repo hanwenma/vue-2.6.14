@@ -16,10 +16,12 @@ export function installRenderHelpers (target: any) {
   target._o = markOnce
   target._n = toNumber
   target._s = toString
+  // v-for
   target._l = renderList
   target._t = renderSlot
   target._q = looseEqual
   target._i = looseIndexOf
+  // 渲染静态节点
   target._m = renderStatic
   target._f = resolveFilter
   target._k = checkKeyCodes

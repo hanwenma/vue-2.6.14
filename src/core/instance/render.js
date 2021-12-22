@@ -60,6 +60,7 @@ export function setCurrentRenderingInstance (vm: Component) {
 
 export function renderMixin (Vue: Class<Component>) {
   // install runtime convenience helpers
+  // 在组件实例上挂载一些运行时需要的工具方法
   installRenderHelpers(Vue.prototype)
 
   // 这里就是 Vue.nextTick 的一个别名
@@ -67,10 +68,17 @@ export function renderMixin (Vue: Class<Component>) {
     return nextTick(fn, this)
   }
 
+  // 执行组件的 render 函数，得到组件的 vnode
   Vue.prototype._render = function (): VNode {
     const vm: Component = this
+    /*
+      获取 render 函数：
+        1. 用户实例化 vue 时提供了 render 配置项
+        2. 编译器编译模板时生成了 render 
+    */ 
     const { render, _parentVnode } = vm.$options
 
+    // 标准化作用域插槽
     if (_parentVnode) {
       vm.$scopedSlots = normalizeScopedSlots(
         _parentVnode.data.scopedSlots,
@@ -89,6 +97,7 @@ export function renderMixin (Vue: Class<Component>) {
       // separately from one another. Nested component's render fns are called
       // when parent component is patched.
       currentRenderingInstance = vm
+      // 执行 render 函数得到组件的 vnode
       vnode = render.call(vm._renderProxy, vm.$createElement)
     } catch (e) {
       handleError(e, vm, `render`)
@@ -108,11 +117,14 @@ export function renderMixin (Vue: Class<Component>) {
     } finally {
       currentRenderingInstance = null
     }
-    // if the returned array contains only a single node, allow it
+
+    // 如果返回的 vnode 数组只包含一个节点，则则直接 vnode 取这个节点 
     if (Array.isArray(vnode) && vnode.length === 1) {
       vnode = vnode[0]
     }
+
     // return empty vnode in case the render function errored out
+    // 如果渲染函数中包含了多个根节点，则返回空的 vnode
     if (!(vnode instanceof VNode)) {
       if (process.env.NODE_ENV !== 'production' && Array.isArray(vnode)) {
         warn(
@@ -123,6 +135,7 @@ export function renderMixin (Vue: Class<Component>) {
       }
       vnode = createEmptyVNode()
     }
+
     // set parent
     vnode.parent = _parentVnode
     return vnode
