@@ -3,44 +3,51 @@
   <head>
     <meta charset="utf-8">
     <title>Vue.js init example</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-      body{
-        text-align: center;
+      .list-view{
+        width: 50%;
+        margin: 100px auto;
+        background-color: antiquewhite;
       }
     </style>
-    <!-- Delete ".min" for console warnings in development -->
     <script src="../../dist/vue.js"></script>
     </head>
   <body>
 
     <div id="app">
-      <h1>
-        {{getMsg}}
-      </h1>
-      <h2>
-        {{getMsg}}
-      </h2>
-      <h3>
-        {{getMsg}}
-      </h3>
+     <list-view @hook:mounted="mountedAction"></list-view>
     </div>
 
     <script>
-      // debugger;
+      // 第三方 vue 组件
+      Vue.component('ListView', {
+        template:`<ul class="list-view">
+          <li v-for="item in list">{{ item }}</li>
+          </ul>`,
+        data(){
+          return {
+            list: []
+          }
+        },
+        mounted(){
+          console.log("mounted in ListView...",this);
+          setTimeout(()=>{
+            this.list = [1,2,3,4,5,6];
+          },1000);
+        }
+      });
 
       new Vue({
         el: '#app',
-        data: {
-          hello: 'hello world!!!'
+        beforeMount(){
+
         },
-        computed:{
-          getMsg: function(){
-            console.log('111111');
-            return this.hello;
+        methods:{
+          mountedAction(){
+            console.log("mountedAction from parent...");
           }
         }
-      })
+      });
     </script>
 
   </body>

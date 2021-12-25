@@ -33,6 +33,11 @@ export function handleError (err: Error, vm: any, info: string) {
   }
 }
 
+/*
+  1. 使用 try catch 包裹生命周期钩子中的逻辑，便于进行异常捕获
+  2. 调用生命周钩子：有 args 参数通过 apply 调用，否则通过 call 调用
+  3. 返回调用结果
+*/
 export function invokeWithErrorHandling (
   handler: Function,
   context: any,
@@ -46,10 +51,11 @@ export function invokeWithErrorHandling (
     if (res && !res._isVue && isPromise(res) && !res._handled) {
       res.catch(e => handleError(e, vm, info + ` (Promise/async)`))
       // issue #9511
-      // avoid catch triggering multiple times when nested calls
+      // 避免在嵌套调用时多次触发 catch
       res._handled = true
     }
   } catch (e) {
+    // 异常处理
     handleError(e, vm, info)
   }
   return res
