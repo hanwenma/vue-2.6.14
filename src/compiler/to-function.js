@@ -22,11 +22,16 @@ export function createCompileToFunctionFn (compile: Function): Function {
   const cache = Object.create(null)
 
   return function compileToFunctions (
+    // 模板字符串
     template: string,
+    // 编译选项
     options?: CompilerOptions,
+    // 组件实例
     vm?: Component
   ): CompiledFunctionResult {
+    // 复制配置选项
     options = extend({}, options)
+    // 日志
     const warn = options.warn || baseWarn
     delete options.warn
 
@@ -48,18 +53,20 @@ export function createCompileToFunctionFn (compile: Function): Function {
       }
     }
 
-    // check cache
+    // 定义缓存对应的 key
     const key = options.delimiters
       ? String(options.delimiters) + template
       : template
+
+    // 如果缓存中有编译结果，直接获取缓存的内容
     if (cache[key]) {
       return cache[key]
     }
 
-    // compile
+    // 通过执行 compile 编译函数，得到编译结果
     const compiled = compile(template, options)
 
-    // check compilation errors/tips
+    // 检查编译结果中所有的 errors 和 tips，并输出到控制台
     if (process.env.NODE_ENV !== 'production') {
       if (compiled.errors && compiled.errors.length) {
         if (options.outputSourceRange) {
@@ -90,7 +97,14 @@ export function createCompileToFunctionFn (compile: Function): Function {
     // turn code into functions
     const res = {}
     const fnGenErrors = []
+    /* 
+     编译结果中 compiled.render 是一个可执行函数的字符串形式
+     需要通过 createFunction 方法将 compiled.render 字符串变成一个真正可执行的函数
+     本质就是通过 new Function(code) 的形式将字符串转换成函数
+    */
+    // 动态渲染函数
     res.render = createFunction(compiled.render, fnGenErrors)
+    // 静态渲染函数
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
     })
@@ -109,6 +123,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
       }
     }
 
+    // 缓存编译结果
     return (cache[key] = res)
   }
 }
