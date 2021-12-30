@@ -57,51 +57,72 @@ let platformMustUseProp
 let platformGetTagNamespace
 let maybeComponent
 
+// 为指定元素创建 AST 对象
 export function createASTElement (
   tag: string,
   attrs: Array<ASTAttr>,
   parent: ASTElement | void
 ): ASTElement {
   return {
-    type: 1,
-    tag,
-    attrsList: attrs,
-    attrsMap: makeAttrsMap(attrs),
-    rawAttrsMap: {},
-    parent,
-    children: []
+    type: 1, // 节点类型
+    tag, // 标签名
+    attrsList: attrs, // 标签的属性数组
+    attrsMap: makeAttrsMap(attrs), // 标签的属性对象 { attrName: attrVal, ... }
+    rawAttrsMap: {}, // 原始属性对象
+    parent, // 父节点
+    children: [] // 孩子节点
   }
 }
 
 /**
- * Convert HTML string to AST.
+ * 将 HTML 字符串转换为 AST
  */
 export function parse (
+  // 模板字符串
   template: string,
+  // 编译选项
   options: CompilerOptions
 ): ASTElement | void {
+  // 日志 
   warn = options.warn || baseWarn
 
+  // 是否为 pre 标签
   platformIsPreTag = options.isPreTag || no
+  // 必须使用 props 进行绑定的属性
   platformMustUseProp = options.mustUseProp || no
+  // 是否为命名空间
   platformGetTagNamespace = options.getTagNamespace || no
+  // 是否为保留标签（html + svg)
   const isReservedTag = options.isReservedTag || no
+  // 判断一个元素是否为一个组件
   maybeComponent = (el: ASTElement) => !!(
     el.component ||
     el.attrsMap[':is'] ||
     el.attrsMap['v-bind:is'] ||
     !(el.attrsMap.is ? isReservedTag(el.attrsMap.is) : isReservedTag(el.tag))
   )
+
+  /*
+     分别获取 options.modules 中的 transformNode、preTransformNode、postTransformNode 方法
+     负责处理元素节点上的 class、style、v-model
+  */ 
   transforms = pluckModuleFunction(options.modules, 'transformNode')
   preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
   postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
 
+  // 界定符，比如: {{}}
   delimiters = options.delimiters
 
+  // 存放解析的中间结果
   const stack = []
+  // 是否保留空白
   const preserveWhitespace = options.preserveWhitespace !== false
+  // 获取空白选项
   const whitespaceOption = options.whitespace
+
+  // 根节点 root，之后处理的节点都会按照层级挂载到 root 下，最后 return 得到的就是 root，也就是 ast 语法树
   let root
+  // 当前元素的父元素
   let currentParent
   let inVPre = false
   let inPre = false
@@ -205,6 +226,7 @@ export function parse (
     }
   }
 
+  // 解析 html 模版字符串，处理所有标签以及标签上的属性，这里 parseHTMLOptions 在后面处理过程中用到，再进一步解析
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,
@@ -383,23 +405,32 @@ export function parse (
         }
       }
     },
+    /* 注释内容-text, 注释开始索引-start, 结束索引-end */
     comment (text: string, start, end) {
       // adding anything as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
+      // 禁止将任何内容作为 root 节点的同级进行添加，注释应该被允许，但是会被忽略
+
+      // 如果 currentParent 不存在，说明注释和 root 为同级，则进行忽略
       if (currentParent) {
+        // 注释节点的 ast
         const child: ASTText = {
           type: 3,
           text,
           isComment: true
         }
         if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
+          // 分别将注释节点的开始索引和结束索引保存到注释节点 child 中
           child.start = start
           child.end = end
         }
+        // 向父元素的 children 属性中添加当前注释节点
         currentParent.children.push(child)
       }
     }
   })
+
+  // 返回生成的 ast 对象 
   return root
 }
 
