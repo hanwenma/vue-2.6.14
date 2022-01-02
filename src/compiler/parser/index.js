@@ -57,7 +57,13 @@ let platformMustUseProp
 let platformGetTagNamespace
 let maybeComponent
 
-// 为指定元素创建 AST 对象
+/* 
+  为指定元素创建 AST 对象
+ * @param {*} tag 标签名
+ * @param {*} attrs 属性数组，[{ name: attrName, value: attrVal, start, end }, ...]
+ * @param {*} parent 父元素
+ * @returns { type: 1, tag, attrsList, attrsMap: makeAttrsMap(attrs), rawAttrsMap: {}, parent, children: []}
+*/
 export function createASTElement (
   tag: string,
   attrs: Array<ASTAttr>,
@@ -574,6 +580,15 @@ function processRawAttrs (el) {
   }
 }
 
+/**
+ * 分别处理元素节点的 key、ref、插槽、自闭合的 slot 标签、动态组件、class、style、v-bind、v-on、其它指令和一些原生属性 
+ * 然后在 el 对象上添加如下属性：
+ * el.key、ref、refInFor、scopedSlot、slotName、component、inlineTemplate、staticClass
+ * el.bindingClass、staticStyle、bindingStyle、attrs
+ * @param {*} element 被处理元素的 ast 对象
+ * @param {*} options 配置项
+ * @returns 
+ */
 export function processElement (
   element: ASTElement,
   options: CompilerOptions
@@ -582,26 +597,55 @@ export function processElement (
 
   // determine whether this is a plain element after
   // removing structural attributes
+  // 确定 element 是否为一个普通元素
   element.plain = (
     !element.key &&
     !element.scopedSlots &&
     !element.attrsList.length
   )
 
+  // el.ref = val, el.refInFor = boolean
   processRef(element)
+  // 处理作为插槽传递给组件的内容，得到 插槽名称、是否为动态插槽、作用域插槽的值，
+  // 以及插槽中的所有子元素，子元素放到插槽对象的 children 属性中
   processSlotContent(element)
+  // 处理自闭合的 slot 标签，得到插槽名称 => el.slotName = xx
   processSlotOutlet(element)
+  // 处理动态组件，<component :is="compoName"></component>得到 el.component = compName，
+  // 以及标记是否存在内联模版，el.inlineTemplate = true of false
   processComponent(element)
+
+
+  /*
+   为 element 对象分别执行 class、style、model 模块中的 transformNode 方法
+   不过 web 平台只有 class、style 模块有 transformNode 方法，分别用来处理 class 属性和 style 属性
+   得到 el.staticStyle、 el.styleBinding、el.staticClass、el.classBinding
+   分别存放静态 style 属性的值、动态 style 属性的值，以及静态 class 属性的值和动态 class 属性的值
+  */
   for (let i = 0; i < transforms.length; i++) {
     element = transforms[i](element, options) || element
   }
+
+  /**
+   处理元素上的所有属性：
+    1. v-bind 指令变成：el.attrs 或 el.dynamicAttrs = [{ name, value, start, end, dynamic }, ...]，
+    或者是必须使用 props 的属性，变成了 el.props = [{ name, value, start, end, dynamic }, ...]
+    2. v-on 指令变成：el.events 或 el.nativeEvents = { name: [{ value, start, end, modifiers, dynamic }, ...] }
+    3. 其它指令：el.directives = [{name, rawName, value, arg, isDynamicArg, modifier, start, end }, ...]
+    4. 原生属性：el.attrs = [{ name, value, start, end }]，或者一些必须使用 props 的属性，
+    变成了：el.props = [{ name, value: true, start, end, dynamic }]
+   */
   processAttrs(element)
   return element
 }
 
+// 处理元素上的 key 属性，设置 el.key = val
 function processKey (el) {
+  // 拿到 key 的属性值
   const exp = getBindingAttr(el, 'key')
+  // 关于 key 使用上的异常处理
   if (exp) {
+    // template 标签不允许设置 key
     if (process.env.NODE_ENV !== 'production') {
       if (el.tag === 'template') {
         warn(
@@ -609,6 +653,8 @@ function processKey (el) {
           getRawBindingAttr(el, 'key')
         )
       }
+      // 不要在 <transition=group> 的子元素上使用 v-for 的 index 作为 key
+      // 否则等价与没有使用 key
       if (el.for) {
         const iterator = el.iterator2 || el.iterator1
         const parent = el.parent
@@ -622,23 +668,41 @@ function processKey (el) {
         }
       }
     }
+    // 设置 el.key = exp
     el.key = exp
   }
 }
 
+/**
+ * 处理元素上的 ref 属性
+ *  el.ref = refVal
+ *  el.refInFor = boolean
+ */
 function processRef (el) {
   const ref = getBindingAttr(el, 'ref')
   if (ref) {
     el.ref = ref
+    // 判断包含 ref 属性的元素是否包含在具有 v-for 指令的元素内或后代元素中
+    // 如果是，则 ref 指向的则是包含 DOM 节点或组件实例的数组
     el.refInFor = checkInFor(el)
   }
 }
 
+/**
+ * 处理 v-for，将结果设置到 el 对象上，得到:
+ *   el.for = 可迭代对象，比如 arr
+ *   el.alias = 别名，比如 item
+ * @param {*} el 元素的 ast 对象
+ */
 export function processFor (el: ASTElement) {
   let exp
+  // 获取 el 上的 v-for 属性的值
   if ((exp = getAndRemoveAttr(el, 'v-for'))) {
+    // 解析 v-for 的表达式，得到 { for: 可迭代对象， alias: 别名 }
+    // 比如 { for: arr, alias: item }
     const res = parseFor(exp)
     if (res) {
+      // 将 res 对象上的属性拷贝到 el 对象上
       extend(el, res)
     } else if (process.env.NODE_ENV !== 'production') {
       warn(
@@ -742,11 +806,24 @@ function processOnce (el) {
   }
 }
 
-// handle content being passed to a component as slot,
-// e.g. <template slot="xxx">, <div slot-scope="xxx">
+/*
+ 处理作为插槽传递给组件的内容，得到：
+  slotTarget => 插槽名
+  slotTargetDynamic => 是否为动态插槽
+  slotScope => 作用域插槽的值
+ 直接在 <comp> 标签上使用 v-slot 语法时，将上述属性放到 el.scopedSlots 对象上，其它情况直接放到 el 对象上
+
+ handle content being passed to a component as slot,
+ e.g. <template slot="xxx">, <div slot-scope="xxx">
+*/
 function processSlotContent (el) {
   let slotScope
   if (el.tag === 'template') {
+    /* 
+     template 标签上使用 scope 属性的提示
+     scope 已经弃用，并在 2.5 之后使用 slot-scope 代替
+     slot-scope 即可以用在 template 标签也可以用在普通标签上
+    */
     slotScope = getAndRemoveAttr(el, 'scope')
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production' && slotScope) {
@@ -759,6 +836,7 @@ function processSlotContent (el) {
         true
       )
     }
+    // el.slotScope = val
     el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope')
   } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
     /* istanbul ignore if */
@@ -775,9 +853,13 @@ function processSlotContent (el) {
   }
 
   // slot="xxx"
+  // 获取 slot 属性的值
+  // slot="xxx"，旧的具名插槽的写法
   const slotTarget = getBindingAttr(el, 'slot')
   if (slotTarget) {
+    // el.slotTarget = 插槽名（具名插槽）
     el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
+    // 动态插槽名
     el.slotTargetDynamic = !!(el.attrsMap[':slot'] || el.attrsMap['v-bind:slot'])
     // preserve slot as an attribute for native shadow DOM compat
     // only for non-scoped slots.
@@ -790,16 +872,33 @@ function processSlotContent (el) {
   if (process.env.NEW_SLOT_SYNTAX) {
     if (el.tag === 'template') {
       // v-slot on <template>
+       // v-slot 在 tempalte 标签上，得到 v-slot 的值
+      // v-slot on <template>
       const slotBinding = getAndRemoveAttrByRegex(el, slotRE)
       if (slotBinding) {
         if (process.env.NODE_ENV !== 'production') {
           if (el.slotTarget || el.slotScope) {
+             // 不同插槽语法禁止混合使用
             warn(
               `Unexpected mixed usage of different slot syntaxes.`,
               el
             )
           }
           if (el.parent && !maybeComponent(el.parent)) {
+             /* 
+             <template v-slot> 只能出现在组件的根位置，比如：
+              <comp>
+                <template v-slot>xx</template>
+              </comp>
+
+              而不能是
+              
+              <comp>
+                <div>
+                  <template v-slot>xxx</template>
+                </div>
+              </comp>
+             */
             warn(
               `<template v-slot> can only appear at the root level inside ` +
               `the receiving component`,
@@ -807,28 +906,39 @@ function processSlotContent (el) {
             )
           }
         }
+        // 得到插槽名称
         const { name, dynamic } = getSlotName(slotBinding)
+        // 将插槽名称保存到 el.slotTarget 上
         el.slotTarget = name
+        // 是否为动态插槽
         el.slotTargetDynamic = dynamic
+        // 作用域插槽的值
         el.slotScope = slotBinding.value || emptySlotScopeToken // force it into a scoped slot for perf
       }
     } else {
-      // v-slot on component, denotes default slot
+       /* 
+        处理组件上的 v-slot，<comp v-slot:header />
+        slotBinding = { name: "v-slot:header", value: "", start, end}
+        v-slot on component, denotes default slot
+       */
       const slotBinding = getAndRemoveAttrByRegex(el, slotRE)
       if (slotBinding) {
         if (process.env.NODE_ENV !== 'production') {
+          // el 不是组件的话，提示，v-slot 只能出现在组件上或 template 标签上
           if (!maybeComponent(el)) {
             warn(
               `v-slot can only be used on components or <template>.`,
               slotBinding
             )
           }
+          // 语法混用
           if (el.slotScope || el.slotTarget) {
             warn(
               `Unexpected mixed usage of different slot syntaxes.`,
               el
             )
           }
+          // 为了避免作用域歧义，当存在其他命名槽时，默认槽也应该使用<template>语法
           if (el.scopedSlots) {
             warn(
               `To avoid scope ambiguity, the default slot should also use ` +
@@ -837,14 +947,21 @@ function processSlotContent (el) {
             )
           }
         }
+        // 将组件的孩子添加到它的默认插槽内
         // add the component's children to its default slot
         const slots = el.scopedSlots || (el.scopedSlots = {})
+        // 获取插槽名称以及是否为动态插槽
         const { name, dynamic } = getSlotName(slotBinding)
+        // 创建一个 template 标签的 ast 对象，用于容纳插槽内容，父级是 el
         const slotContainer = slots[name] = createASTElement('template', [], el)
+        // 插槽名
         slotContainer.slotTarget = name
+        // 是否为动态插槽
         slotContainer.slotTargetDynamic = dynamic
+        // 所有的孩子，将每一个孩子的 parent 属性都设置为 slotContainer
         slotContainer.children = el.children.filter((c: any) => {
           if (!c.slotScope) {
+            // 给插槽内元素设置 parent 属性为 slotContainer，也就是 template 元素
             c.parent = slotContainer
             return true
           }
@@ -859,6 +976,10 @@ function processSlotContent (el) {
   }
 }
 
+/**
+ * 解析 binding，得到插槽名称以及是否为动态插槽
+ * @returns { name: 插槽名称, dynamic: 是否为动态插槽 }
+ */
 function getSlotName (binding) {
   let name = binding.name.replace(slotRE, '')
   if (!name) {
@@ -878,10 +999,13 @@ function getSlotName (binding) {
     : { name: `"${name}"`, dynamic: false }
 }
 
-// handle <slot/> outlets
+// handle <slot/> outlets，处理自闭合 slot 标签
+// 得到插槽名称，el.slotName
 function processSlotOutlet (el) {
   if (el.tag === 'slot') {
+     // 得到插槽名称
     el.slotName = getBindingAttr(el, 'name')
+     // 不允许在 slot 标签上使用 key 属性
     if (process.env.NODE_ENV !== 'production' && el.key) {
       warn(
         `\`key\` does not work on <slot> because slots are abstract outlets ` +
@@ -893,11 +1017,21 @@ function processSlotOutlet (el) {
   }
 }
 
+/**
+ * 处理动态组件，<component :is="compName"></component>
+ * 得到 el.component = compName
+ */
 function processComponent (el) {
   let binding
+  // 解析 is 属性，得到属性值，即组件名称，el.component = compName
   if ((binding = getBindingAttr(el, 'is'))) {
     el.component = binding
   }
+   /* 
+    <component :is="compName" inline-template>xx</component>
+    组件上存在 inline-template 属性，进行标记：el.inlineTemplate = true
+    表示组件开始和结束标签内的内容作为组件模版出现，而不是作为插槽别分发，方便定义组件模版
+   */
   if (getAndRemoveAttr(el, 'inline-template') != null) {
     el.inlineTemplate = true
   }
