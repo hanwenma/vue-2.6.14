@@ -26,8 +26,9 @@ export const createCompiler = createCompilerCreator(function baseCompile(
 
   /*
    优化，遍历 AST，为每个节点做静态标记
-     - 标记每个节点是否为静态节点，，保证在后续更新中跳过这些静态节点
+     - 标记每个节点是否为静态节点，保证在后续更新中跳过这些静态节点
      - 标记出静态根节点，用于生成渲染函数阶段，生成静态根节点的渲染函数
+       优化，遍历 AST，为每个节点做静态标记
  */
   if (options.optimize !== false) {
     optimize(ast, options)
