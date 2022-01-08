@@ -52,25 +52,44 @@ const modifierCode: { [key: string]: string } = {
   right: genGuard(`'button' in $event && $event.button !== 2`)
 }
 
+/*
+  生成自定义事件的代码
+  动态：'nativeOn|on_d(staticHandlers, [dynamicHandlers])'
+  静态：`nativeOn|on${staticHandlers}`
+ */
 export function genHandlers (
   events: ASTElementHandlers,
   isNative: boolean
 ): string {
+  // 原生为 nativeOn，否则为 on
   const prefix = isNative ? 'nativeOn:' : 'on:'
+  // 静态
   let staticHandlers = ``
+  // 动态
   let dynamicHandlers = ``
+  /*
+    遍历 events 数组
+    events = [{ name: { value: 回调函数名, ... } }]
+  */ 
   for (const name in events) {
     const handlerCode = genHandler(events[name])
     if (events[name] && events[name].dynamic) {
+      // 动态，dynamicHandles = `eventName,handleCode,...,`
       dynamicHandlers += `${name},${handlerCode},`
     } else {
+      // staticHandlers = `eventName:handleCode,...,`
       staticHandlers += `"${name}":${handlerCode},`
     }
   }
+
+  // 闭合静态事件处理代码字符串，去除末尾的 ','
   staticHandlers = `{${staticHandlers.slice(0, -1)}}`
+
   if (dynamicHandlers) {
+    // 动态，on_d(statickHandles, [dynamicHandlers])
     return prefix + `_d(${staticHandlers},[${dynamicHandlers.slice(0, -1)}])`
   } else {
+    // 静态，`on${staticHandlers}`
     return prefix + staticHandlers
   }
 }

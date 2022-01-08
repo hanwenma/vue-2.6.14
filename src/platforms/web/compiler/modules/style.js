@@ -50,9 +50,11 @@ function transformNode (el: ASTElement, options: CompilerOptions) {
 
 function genData (el: ASTElement): string {
   let data = ''
+  // 静态样式 --> staticStyle:
   if (el.staticStyle) {
     data += `staticStyle:${el.staticStyle},`
   }
+  // 动态样式 --> style:
   if (el.styleBinding) {
     data += `style:(${el.styleBinding}),`
   }
