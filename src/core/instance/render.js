@@ -24,13 +24,17 @@ export function initRender (vm: Component) {
   const renderContext = parentVnode && parentVnode.context
   vm.$slots = resolveSlots(options._renderChildren, renderContext)
   vm.$scopedSlots = emptyObject
-  // bind the createElement fn to this instance
-  // so that we get proper render context inside it.
-  // args order: tag, data, children, normalizationType, alwaysNormalize
-  // internal version is used by render functions compiled from templates
+  
+  /*
+    将 createElement 方法绑定到此实例，方便在其中获得当前的渲染上下文
+    参数顺序：tag, data, children, normalizationType, alwaysNormalize
+    内部版本由从模板编译的渲染函数使用
+
+     vm._c = (标签名, 属性的 JSON 字符串, 子节点数组, 节点规范化类型)
+  */ 
   vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
-  // normalization is always applied for the public version, used in
-  // user-written render functions.
+
+  // 规范化始终应用于公共版本，用于用户编写的渲染函数
   vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
 
   // $attrs & $listeners are exposed for easier HOC creation.

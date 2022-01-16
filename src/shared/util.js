@@ -80,7 +80,8 @@ export function isPromise (val: any): boolean {
 }
 
 /**
- * Convert a value to a string that is actually rendered.
+ * 将值转换为实际呈现的字符串
+ * JSON.stringify(value[, replacer [, space]])
  */
 export function toString (val: any): string {
   return val == null
@@ -91,8 +92,8 @@ export function toString (val: any): string {
 }
 
 /**
- * Convert an input value to a number for persistence.
- * If the conversion fails, return original string.
+ * 将输入值转换为用于持久性的数字
+ * 如果转换失败，则返回原始字符串
  */
 export function toNumber (val: string): number | string {
   const n = parseFloat(val)

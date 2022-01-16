@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Vue.js init example</title>
+    <style>
+      .list-view{
+        width: 50%;
+        margin: 100px auto;
+        background-color: antiquewhite;
+      }
+    </style>
+    <script src="../../dist/vue.js"></script>
+    </head>
+  <body>
+
+    <div id="app">
+     <item @click.native="outClick"></item>
+    </div>
+
+    <template id="tpl">
+      <div class="item" style="padding: 10x;text-align: center;background-color: antiquewhite;">item</div>
+    </template>
+
+    <script>
+
+      Vue.component('item',{
+        template: '#tpl',
+        mounted(){
+          console.log(this);
+        },
+        methods: {
+          innerClick(){
+            alert('comp')
+          }
+        }
+      });
+
+      new Vue({
+        el: '#app',
+        methods:{
+          outClick(){
+            alert(1);
+          }
+        },
+      });
+    </script>
+
+  </body>
+</html>

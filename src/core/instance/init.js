@@ -146,10 +146,16 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
   return options
 }
 
+/**
+ * 解析构造函数选项中后续被修改或者增加的选项
+ */
 function resolveModifiedOptions (Ctor: Class<Component>): ?Object {
   let modified
+   // 构造函数选项
   const latest = Ctor.options
+  // 密封的构造函数选项，备份
   const sealed = Ctor.sealedOptions
+  // 对比两个选项，记录不一致的选项
   for (const key in latest) {
     if (latest[key] !== sealed[key]) {
       if (!modified) modified = {}
