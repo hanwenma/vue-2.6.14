@@ -161,6 +161,9 @@ function callActivatedHooks (queue) {
 }
 
 /**
+ * 将一个 watcher 添加到 watcher 队列中
+ * 如果存在重复 IDs 的 watcher 会被跳过
+ * 除非这个 watcher 正在被刷新 
  * Push a watcher into the watcher queue.
  * Jobs with duplicate IDs will be skipped unless it's
  * pushed when the queue is being flushed.

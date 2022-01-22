@@ -60,8 +60,10 @@ export function lifecycleMixin (Vue: Class<Component>) {
   Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
     const vm: Component = this
     const prevEl = vm.$el
+    // old VNode
     const prevVnode = vm._vnode
     const restoreActiveInstance = setActiveInstance(vm)
+    // new VNode
     vm._vnode = vnode
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
@@ -225,6 +227,11 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
+  /*
+    当 isRenderWatcher = true 时， vm._watcher = this  内部 watcher 的构造函数
+    因为观察者的初始 patch 时，可能会调用 $forceUpdate（例如，在子组件的挂载钩子中）
+    它依赖于已定义的观察者 vm._watcher 
+  */
   new Watcher(vm, updateComponent, noop, {
     before () {
       if (vm._isMounted && !vm._isDestroyed) {
